@@ -1,189 +1,215 @@
 <!DOCTYPE html>
 <html lang="en-US">
- <head>
+<head>
     <meta charset="utf-8">
-    <title>Earthquake List</title>
+    <title>Volcano Activity Map</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+    <!-- Mapbox GL CSS & JS -->
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.css" rel="stylesheet">
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.0/mapbox-gl.js"></script>
+
     <style>
-        
         body {
-    margin: 0;
-    padding: 0;
-}
-
-#container {
-    display: flex;
-    height: 100vh;
-    flex-direction: row;
-    align-items: stretch;
-}
-
-#side-panel {
-    flex-basis: 500px;
-    overflow-y: scroll;
-}
-
-#map {
-    flex-grow: 1;
-}
-
-button {
-    margin-bottom: 10px;
-}
-
-table {
-    border-collapse: collapse;
-    border-spacing: 0;
-    width: 100%;
-    border: 1px solid #ddd;
-}
-
-th,
-td {
-    text-align: left;
-    padding: 16px;
-}
-
-tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
-    </style>
- </head>
- <body>
-    <main id="container">
-       <div id="side-panel">
-
-           <h2>Earthquake List</h2>
-           <button>Sort by Magnitude</button>
-
-           <table>
-               <tr>
-                   <th>id</th>
-                   <th>magnitude</th>
-                   <th>timestamp</th>
-               </tr>
-           </table>
-
-       </div>
-       <div id="map"></div>
-   </main>
-   <script>
-    
-    mapboxgl.accessToken = 'pk.eyJ1IjoiamthbmRhIiwiYSI6ImNtaGN5c3JwbDIyNDUybHBxM2VweHBrNzYifQ.Akume5yUr5MZyYxPQq9EjA'
-
-    let map = new mapboxgl.Map({
-    container: 'map', // container ID
-    style: 'mapbox://styles/mapbox/satellite-v9', // style URL
-    zoom: 5.5, // starting zoom
-    center: [138, 38] // starting center
-});
-
-async function geojsonFetch() {
-    let response, earthquakes, japan, table;
-    response = await fetch('assets/earthquakes.geojson');
-    earthquakes = await response.json();
-    response = await fetch('assets/japan.json');
-    japan = await response.json();
-
-
-//load data to the map as new layers and table on the side.
-map.on('load', function loadingData() {
-
-    map.addSource('earthquakes', {
-        type: 'geojson',
-        data: earthquakes
-    });
-
-    map.addLayer({
-        'id': 'earthquakes-layer',
-        'type': 'circle',
-        'source': 'earthquakes',
-        'paint': {
-            'circle-radius': 8,
-            'circle-stroke-width': 2,
-            'circle-color': 'red',
-            'circle-stroke-color': 'white'
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
         }
-    });
 
-
-    map.addSource('japan', {
-        type: 'geojson',
-        data: japan
-    });
-
-    map.addLayer({
-        'id': 'japan-layer',
-        'type': 'fill',
-        'source': 'japan',
-        'paint': {
-            'fill-color': '#0080ff', // blue color fill
-            'fill-opacity': 0.5
+        /* Full-screen map background */
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
         }
-    });
 
-});
+        /* Floating side panel overlaying map */
+        #side-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            overflow-y: auto;
+            box-shadow: -2px 0 6px rgba(0,0,0,0.2);
+            padding: 15px;
+            box-sizing: border-box;
+        }
 
-table = document.getElementsByTagName("table")[0];
-let row, cell1, cell2, cell3;
-for (let i = 0; i < earthquakes.features.length; i++) {
-    // Create an empty <tr> element and add it to the 1st position of the table:
-    row = table.insertRow(-1);
-    cell1 = row.insertCell(0);
-    cell2 = row.insertCell(1);
-    cell3 = row.insertCell(2);
-    cell1.innerHTML = earthquakes.features[i].properties.id;
-    cell2.innerHTML = earthquakes.features[i].properties.mag;
-    cell3.innerHTML = new Date(earthquakes.features[i].properties.time).toLocaleDateString(
-        "en-US");
-}
-};
+        button {
+            margin-bottom: 10px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
 
-geojsonFetch();
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
 
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
 
-let btn = document.getElementsByTagName("button")[0];
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
 
-btn.addEventListener('click', sortTable);
-
-// define the function to sort table
-function sortTable(e) {
-    let table, rows, switching, i, x, y, shouldSwitch;
-    table = document.getElementsByTagName("table")[0];
-    switching = true;
-    /*Make a loop that will continue until
-    no switching has been done:*/
-    while (switching) {
-        //start by saying: no switching is done:
-        switching = false;
-        rows = table.rows;
-        /*Loop through all table rows (except the
-        first, which contains table headers):*/
-        for (i = 1; i < (rows.length - 1); i++) {
-            //start by saying there should be no switching:
-            shouldSwitch = false;
-            /*Get the two elements you want to compare,
-            one from current row and one from the next:*/
-            x = parseFloat(rows[i].getElementsByTagName("td")[1].innerHTML);
-            y = parseFloat(rows[i + 1].getElementsByTagName("td")[1].innerHTML);
-            //check if the two rows should switch place:
-            if (x < y) {
-                //if so, mark as a switch and break the loop:
-                shouldSwitch = true;
-                break;
+        /* Hide panel for narrow screens */
+        @media (max-width: 1024px) {
+            #side-panel {
+                display: none;
             }
         }
-        if (shouldSwitch) {
-            /*If a switch has been marked, make the switch
-            and mark that a switch has been done:*/
-            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-            switching = true;
-        }
-    }
-}
+    </style>
+</head>
+<body>
+    <div id="map"></div>
 
-</script>
-</body>  
-<html>    
+    <div id="side-panel">
+        <h2>Volcano Activity Map</h2>
+        <button id="sortBtn">Sort by Elevation</button>
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Classification</th>
+                <th>Elevation (m)</th>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        
+        mapboxgl.accessToken = 'pk.eyJ1IjoiamthbmRhIiwiYSI6ImNtaGN5c3JwbDIyNDUybHBxM2VweHBrNzYifQ.Akume5yUr5MZyYxPQq9EjA';
+
+        
+        let map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            zoom: 5,
+            center: [122, 12]
+        });
+
+        async function geojsonFetch() {
+            let response, active, inactive, table;
+
+            // Fetch the two GeoJSON files
+            response = await fetch('assets/active.geojson');
+            active = await response.json();
+
+            response = await fetch('assets/inactive.geojson');
+            inactive = await response.json();
+
+            // Get table reference
+            table = document.getElementsByTagName("table")[0];
+            let row, cell1, cell2, cell3;
+
+            // Fill table with active volcanoes
+            for (let i = 0; i < active.features.length; i++) {
+                row = table.insertRow(-1);
+                cell1 = row.insertCell(0);
+                cell2 = row.insertCell(1);
+                cell3 = row.insertCell(2);
+                cell1.innerHTML = active.features[i].properties.name || "Unknown";
+                cell2.innerHTML = active.features[i].properties.classification || "active";
+                cell3.innerHTML = active.features[i].properties.elev != null ? active.features[i].properties.elev : "N/A";
+            }
+
+            // Fill table with inactive volcanoes
+            for (let i = 0; i < inactive.features.length; i++) {
+                row = table.insertRow(-1);
+                cell1 = row.insertCell(0);
+                cell2 = row.insertCell(1);
+                cell3 = row.insertCell(2);
+                cell1.innerHTML = inactive.features[i].properties.name || "Unknown";
+                cell2.innerHTML = inactive.features[i].properties.classification || "inactive";
+                cell3.innerHTML = inactive.features[i].properties.elev != null ? inactive.features[i].properties.elev : "N/A";
+            }
+
+            // Load map layers once map is ready
+            map.on('load', function() {
+                map.addSource('active', { type: 'geojson', data: active });
+                map.addSource('inactive', { type: 'geojson', data: inactive });
+
+                // Active volcanoes (red)
+                map.addLayer({
+                    'id': 'active-layer',
+                    'type': 'circle',
+                    'source': 'active',
+                    'paint': {
+                        'circle-radius': 6,
+                        'circle-stroke-width': 1,
+                        'circle-color': '#ff3333',
+                        'circle-stroke-color': '#ffffff'
+                    }
+                });
+
+                // Inactive volcanoes (gray)
+                map.addLayer({
+                    'id': 'inactive-layer',
+                    'type': 'circle',
+                    'source': 'inactive',
+                    'paint': {
+                        'circle-radius': 6,
+                        'circle-stroke-width': 1,
+                        'circle-color': '#808080',
+                        'circle-stroke-color': '#ffffff'
+                    }
+                });
+
+                // Fit map to include all volcano points
+                const allFeatures = active.features.concat(inactive.features);
+                if (allFeatures.length > 0) {
+                    const bounds = allFeatures.reduce((b, feature) => {
+                        return b.extend(feature.geometry.coordinates);
+                    }, new mapboxgl.LngLatBounds(
+                        allFeatures[0].geometry.coordinates,
+                        allFeatures[0].geometry.coordinates
+                    ));
+                    map.fitBounds(bounds, { padding: 50 });
+                }
+            });
+        }
+
+        
+        geojsonFetch();
+
+       
+        let btn = document.getElementById("sortBtn");
+        btn.addEventListener('click', sortTable);
+
+        
+        function sortTable(e) {
+            let table, rows, switching, i, x, y, shouldSwitch;
+            table = document.getElementsByTagName("table")[0];
+            switching = true;
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = parseFloat(rows[i].getElementsByTagName("td")[2].textContent.trim());
+                    y = parseFloat(rows[i + 1].getElementsByTagName("td")[2].textContent.trim());
+                    //for the NA values prevents it from causing table not to
+                    if (isNaN(x)) x = -Infinity;
+                    if (isNaN(y)) y = -Infinity;
+
+                    // Descending order
+                    if (x < y) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
